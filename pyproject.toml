@@ -1,0 +1,15 @@
+[project]
+name = "comfyui-lock-mode"
+description = "Make Lock Mode feature available in ComfyUI.\nMake no-code interfaces directly in Comfy canvas."
+version = "0.0.1"
+license = { file = "LICENSE" }
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/morgan55555/comfyui-lock-mode"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = "morgan55555"
+DisplayName = "comfyui-lock-mode"
+Icon = ""
