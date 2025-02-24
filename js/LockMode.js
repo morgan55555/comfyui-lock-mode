@@ -8,6 +8,22 @@ const nodeOptionsWhitelist = [
     "Open in MaskEditor"
 ];
 
+function updateNodesWidgetsDisabledState(disabled) {
+    const nodes = app.graph.nodes;
+    nodes.forEach((node) => {
+        const allow_interaction = node.flags.allow_interaction ?? false;
+        const widget_disabled = disabled && !allow_interaction;
+        const widgets = node.widgets;
+        widgets.forEach((widget) => {
+            widget.disabled = widget_disabled;
+
+            if (widget.element) {
+                widget.element.disabled = widget_disabled;
+            }
+        });
+    });
+}
+
 app.registerExtension({
     name: "Comfy.LockMode",
 
@@ -43,6 +59,9 @@ app.registerExtension({
     afterConfigureGraph() {
         // And deny after it, if we are in locked mode
         app.graph._loading = false;
+
+        const isLockModeEnabled = (getStorageValue("LockMode.Enabled") === "true");
+        updateNodesWidgetsDisabledState(isLockModeEnabled);
     },
 
     async setup() {
@@ -158,6 +177,7 @@ app.registerExtension({
                     setStorageValue("LockMode.Enabled", mode)
                     updateButtons();
                     updateMode();
+                    updateWidgets();
                 } catch(exception) {
                     console.log('Unexpected error when switching modes.');
                 }
@@ -201,6 +221,13 @@ app.registerExtension({
                 app.canvas.deleteSelected = canvasDeleteSelected;
                 app.graph.add = graphAdd;
             }
+        }
+
+        function updateWidgets() {
+            const isLockModeEnabled = (getStorageValue("LockMode.Enabled") === "true");
+
+            // Set widgets disabled state
+            updateNodesWidgetsDisabledState(isLockModeEnabled);
         }
 
         try {
