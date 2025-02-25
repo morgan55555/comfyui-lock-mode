@@ -78,6 +78,7 @@ app.registerExtension({
         let canvasDeleteSelected = app.canvas.deleteSelected;
 
         let graphAdd = app.graph.add;
+        let graphClear = app.graph.clear;
 
         function canvasOnMouse(e2) {
             const { pointer, graph } = this;
@@ -174,6 +175,14 @@ app.registerExtension({
             return null;
         }
 
+        function graphClearLocked() {
+            // Only allow adding if in initial loading state
+            if (this._loading) {
+                return graphClear.call(this);
+            }
+            return null;
+        }
+
         function setLockMode(mode) {
             const isLockModeEnabled = (getStorageValue("LockMode.Enabled") === "true");
             if (mode != isLockModeEnabled) {
@@ -214,6 +223,7 @@ app.registerExtension({
                 app.canvas.getNodeMenuOptions = canvasGetNodeMenuOptionsLocked;
                 app.canvas.deleteSelected = () => {};
                 app.graph.add = graphAddLocked;
+                app.graph.clear = graphClearLocked;
             } else {
                 app.canvas.allow_dragnodes = true;
                 app.canvas.allow_reconnect_links = true;
@@ -224,6 +234,7 @@ app.registerExtension({
                 app.canvas.getNodeMenuOptions = canvasGetNodeMenuOptions;
                 app.canvas.deleteSelected = canvasDeleteSelected;
                 app.graph.add = graphAdd;
+                app.graph.clear = graphClear;
             }
         }
 
