@@ -104,13 +104,6 @@ app.registerExtension({
                 return true;
             }
 
-            const group = graph.getGroupOnPos(x2, y2);
-
-            if (group) {
-                // Stop interaction with groups
-                return true;
-            }
-
             const node = graph.getNodeOnPos(x2, y2, this.visible_nodes);
 
             if (node) {
@@ -136,6 +129,12 @@ app.registerExtension({
                 }
 
             } else {
+                // Stop interaction with groups outside the nodes
+                const group = graph.getGroupOnPos(x2, y2);
+                if (group) {
+                    return true;
+                }
+
                 // Stop right clicks outside the nodes
                 if (e2.button === 2) {
                     return true;
