@@ -80,6 +80,8 @@ app.registerExtension({
         let graphAdd = app.graph.add;
         let graphClear = app.graph.clear;
 
+        let appLoadGraphData = app.loadGraphData;
+
         function canvasOnMouse(e2) {
             const { pointer, graph } = this;
             const x2 = e2.canvasX;
@@ -182,6 +184,17 @@ app.registerExtension({
             return null;
         }
 
+        async function appLoadGraphDataWDefault(graphData, clean = true, restore_view = true, workflow = null, { showMissingNodesDialog = true, showMissingModelsDialog = true } = {}) {
+            // Load default graph from templates instead of hardcoded
+            if (!graphData || graphData == window.comfyAPI.defaultGraph.defaultGraph) {
+                graphData = await fetch(
+                    this.api.fileURL("/templates/default.json")
+                ).then((r2) => r2.json());
+            }
+
+            return appLoadGraphData.call(this, graphData, clean, restore_view, workflow, { showMissingNodesDialog, showMissingModelsDialog });
+        }
+
         function setLockMode(mode) {
             const isLockModeEnabled = (getStorageValue("LockMode.Enabled") === "true");
             if (mode != isLockModeEnabled) {
@@ -274,6 +287,8 @@ app.registerExtension({
 
             updateButtons();
             updateMode();
+
+            app.loadGraphData = appLoadGraphDataWDefault;
 
         } catch(exception) {
             console.log('ComfyUI is outdated. New style menu based features are disabled.');
