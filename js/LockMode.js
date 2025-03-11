@@ -1,5 +1,5 @@
-import { app } from "/scripts/app.js";
-import { getStorageValue, setStorageValue } from "/scripts/utils.js";
+import { app } from "../../scripts/app.js";
+import { getStorageValue, setStorageValue } from "../../scripts/utils.js";
 
 const nodeOptionsWhitelist = [
     "Open Image",
@@ -8,21 +8,86 @@ const nodeOptionsWhitelist = [
     "Open in MaskEditor"
 ];
 
+const classDisplayDisabledBlacklist = [
+    "Note",
+    "MarkdownNote"
+];
+
+const nodeDefaultAllowInteractionValue = true;
+
+const pageCss = `
+.disabled {
+	pointer-events: none !important;
+    cursor: not-allowed !important;
+}
+
+.disabled a {
+	pointer-events: auto !important;
+}
+
+.display_disabled {
+    opacity: 0.5 !important;
+}
+`;
+
 function updateNodesWidgetsDisabledState(disabled) {
     const nodes = app.graph.nodes;
     nodes.forEach((node) => {
         const allow_interaction = node.flags.allow_interaction ?? false;
         const widget_disabled = disabled && !allow_interaction;
+        const display_as_disabled = widget_disabled && !(classDisplayDisabledBlacklist.indexOf(node.type) > -1);
         const widgets = node.widgets ?? [];
         widgets.forEach((widget) => {
             widget.disabled = widget_disabled;
 
             if (widget.element) {
                 widget.element.disabled = widget_disabled;
+
+                if (widget_disabled) {
+                    widget.element.classList.add('disabled');
+                } else {
+                    widget.element.classList.remove('disabled');
+                }
+
+                if (display_as_disabled) {
+                    widget.element.classList.add('display_disabled');
+                } else {
+                    widget.element.classList.remove('display_disabled');
+                }
             }
         });
     });
 }
+
+function updateSelectionOverlayDisabledState(disabled) {
+    const overlays = document.getElementsByClassName("selection-overlay-container");
+    [].forEach.call(overlays, (element) => {
+        if (disabled) {
+            element.classList.add('hidden');
+        } else {
+            element.classList.remove('hidden');
+        }
+    });
+}
+
+function getSelectedNodes() {
+    const selectedNodes = app.canvas.selected_nodes;
+    const result = [];
+    if (selectedNodes) {
+        for (const i in selectedNodes) {
+            const node = selectedNodes[i];
+            result.push(node);
+        }
+    }
+    return result;
+}
+
+function setSelectedNodesInteractionState(value) {
+    getSelectedNodes().forEach((node) => {
+        node.flags.allow_interaction = value;
+    })
+}
+
 
 app.registerExtension({
     name: "Comfy.LockMode",
@@ -31,6 +96,10 @@ app.registerExtension({
         if (getStorageValue("LockMode.Enabled") == null) {
             setStorageValue("LockMode.Enabled", true);
         }
+
+		const $style = document.createElement("style");
+		$style.innerHTML = pageCss;
+		document.head.appendChild($style);
     },
 
     beforeRegisterNodeDef(nodeType, nodeData, app) {
@@ -63,9 +132,51 @@ app.registerExtension({
         // Lock UI widgets, especially multiline text
         const isLockModeEnabled = (getStorageValue("LockMode.Enabled") === "true");
         updateNodesWidgetsDisabledState(isLockModeEnabled);
+        updateSelectionOverlayDisabledState(isLockModeEnabled);
 
         // Reset view after graph load
         app.resetView();
+    },
+
+    nodeCreated(node) {
+        // Add default allow_interaction value
+        node.flags.allow_interaction = nodeDefaultAllowInteractionValue;
+
+        // Add lock icon to node title
+        const original_getTitle = node.getTitle;
+        node.getTitle = function() {
+            const locked = !this.flags.allow_interaction;
+            return original_getTitle.call(this) + (locked ? "🔒" : "");
+        }
+    },
+
+    commands: [
+        {
+            id: 'lockMode.selection.unlock',
+            label: 'Allow in locked mode',
+            icon: 'pi pi-lock-open',
+            function: () => {
+                setSelectedNodesInteractionState(true);
+                app.canvas.deselectAllNodes();
+            }
+        },
+        {
+            id: 'lockMode.selection.lock',
+            label: 'Deny in locked mode',
+            icon: 'pi pi-lock',
+            function: () => {
+                setSelectedNodesInteractionState(false);
+                app.canvas.deselectAllNodes();
+            }
+        }
+    ],
+    
+    getSelectionToolboxCommands: (selectedItem) => {
+        if (selectedItem.flags.allow_interaction) {
+            return ['lockMode.selection.lock'];
+        } else {
+            return ['lockMode.selection.unlock'];
+        }
     },
 
     async setup() {
@@ -111,6 +222,11 @@ app.registerExtension({
             if (node) {
                 // Stop interaction with collapsed nodes
                 if (node.flags.collapsed) {
+                    return true;
+                }
+
+                // Stop interaction with disabled nodes
+                if (!node.flags.allow_interaction) {
                     return true;
                 }
 
@@ -203,6 +319,7 @@ app.registerExtension({
                     updateButtons();
                     updateMode();
                     updateWidgets();
+                    updateSelectionOverlay();
                 } catch(exception) {
                     console.log('Unexpected error when switching modes.');
                 }
@@ -228,7 +345,6 @@ app.registerExtension({
             if (isLockModeEnabled) {
                 app.canvas.allow_dragnodes = false;
                 app.canvas.allow_reconnect_links = false;
-                app.canvas.allow_interaction = false;
                 app.canvas.onMouse = canvasOnMouse;
                 app.canvas._pasteFromClipboard = () => {};
                 app.canvas.showLinkMenu = () => {};
@@ -239,7 +355,6 @@ app.registerExtension({
             } else {
                 app.canvas.allow_dragnodes = true;
                 app.canvas.allow_reconnect_links = true;
-                app.canvas.allow_interaction = true;
                 app.canvas.onMouse = null;
                 app.canvas._pasteFromClipboard = canvasPasteFromClipboard;
                 app.canvas.showLinkMenu = canvasShowLinkMenu;
@@ -255,6 +370,13 @@ app.registerExtension({
 
             // Set widgets disabled state
             updateNodesWidgetsDisabledState(isLockModeEnabled);
+        }
+
+        function updateSelectionOverlay() {
+            const isLockModeEnabled = (getStorageValue("LockMode.Enabled") === "true");
+
+            // Set selection overlay disabled state
+            updateSelectionOverlayDisabledState(isLockModeEnabled);
         }
 
         try {
