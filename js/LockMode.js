@@ -60,7 +60,7 @@ function updateNodesWidgetsDisabledState(disabled) {
 }
 
 function updateSelectionOverlayDisabledState(disabled) {
-    const overlays = document.getElementsByClassName("selection-overlay-container");
+    const overlays = document.querySelectorAll(".selection-overlay-container,.selection-toolbox");
     [].forEach.call(overlays, (element) => {
         if (disabled) {
             element.classList.add('hidden');
