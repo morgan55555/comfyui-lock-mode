@@ -13,6 +13,11 @@ const classDisplayDisabledBlacklist = [
     "MarkdownNote"
 ];
 
+const classLockedEnableBlacklist = [
+    "Reroute",
+    "Reroute (rgthree)"
+];
+
 const nodeDefaultAllowInteractionValue = true;
 
 const pageCss = `
@@ -230,6 +235,11 @@ app.registerExtension({
                     return true;
                 }
 
+                // Stop interaction with blacklisted nodes
+                if ((classLockedEnableBlacklist.indexOf(node.type) > -1)) {
+                    return true;
+                }
+
                 // Stop interaction with node resize corner
                 if (node.resizable !== false && node.inResizeCorner(x2, y2)) {
                     return true;
@@ -274,7 +284,7 @@ app.registerExtension({
             }
 
             // And filter it with whitelist
-            options = options.filter(option => nodeOptionsWhitelist.indexOf(option.content) > -1);
+            options = options.filter(option => option && (nodeOptionsWhitelist.indexOf(option.content) > -1));
 
             // Return only if not empty
             if (options.length > 0) {
