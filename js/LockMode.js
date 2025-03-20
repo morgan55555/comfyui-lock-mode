@@ -210,8 +210,6 @@ app.registerExtension({
         let graphAdd = app.graph.add;
         let graphClear = app.graph.clear;
 
-        let appLoadGraphData = app.loadGraphData;
-
         function canvasOnMouse(e2) {
             const { pointer, graph } = this;
             const x2 = e2.canvasX;
@@ -259,14 +257,14 @@ app.registerExtension({
                     return true;
                 }
 
-                // Stop interaction with node name and links
-                let protectedHeaderSizeY = 0;
-                if (node.inputs.length || node.outputs.length) {
-                    const lastLinkNum = Math.max(node.inputs.length, node.outputs.length);
-                    protectedHeaderSizeY = lastLinkNum * 20 + 5;
-                }
+                // Stop interaction with node name and collapse button
                 const posY = y2 - node.pos[1];
-                if (posY < protectedHeaderSizeY) {
+                if (posY < 0) {
+                    return true;
+                }
+
+                // Stop interaction with node links (slots)
+                if (node.getSlotInPosition(x2, y2)) {
                     return true;
                 }
 
