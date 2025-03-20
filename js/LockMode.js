@@ -1,7 +1,7 @@
 import { app } from "../../scripts/app.js";
 import { getStorageValue, setStorageValue } from "../../scripts/utils.js";
 
-const hiddenLinkMode = 4;
+const hiddenLinkMode = -1;
 
 const nodeOptionsWhitelist = [
     "Open Image",
@@ -78,16 +78,13 @@ function updateSelectionOverlayDisabledState(disabled) {
 }
 
 function updateNodesLinksDisabledState(disabled) {
-    // Set node links visibility state
-    if (disabled) {
-        app.canvas.links_render_mode = hiddenLinkMode;
-    } else {
-        const linkRenderMode = app.extensionManager.setting.get("Comfy.LinkRenderMode");
-        app.canvas.links_render_mode = linkRenderMode;
-    }
+    const linkRenderMode = app.extensionManager.setting.get("Comfy.LinkRenderMode");
+    const linkHiddenState = (linkRenderMode === hiddenLinkMode);
 
-    // Update canvas
-    app.canvas.setDirty(/* fg */ false, /* bg */ true);
+    // Set node links visibility state
+    if (disabled !== linkHiddenState) {
+        app.extensionManager.command.execute("Comfy.Canvas.ToggleLinkVisibility");
+    }
 }
 
 function getSelectedNodes() {
