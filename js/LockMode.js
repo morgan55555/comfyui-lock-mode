@@ -1,6 +1,8 @@
 import { app } from "../../scripts/app.js";
 import { getStorageValue, setStorageValue } from "../../scripts/utils.js";
 
+const hiddenLinkMode = 4;
+
 const nodeOptionsWhitelist = [
     "Open Image",
     "Save Image",
@@ -75,6 +77,19 @@ function updateSelectionOverlayDisabledState(disabled) {
     });
 }
 
+function updateNodesLinksDisabledState(disabled) {
+    // Set node links visibility state
+    if (disabled) {
+        app.canvas.links_render_mode = hiddenLinkMode;
+    } else {
+        const linkRenderMode = app.extensionManager.setting.get("Comfy.LinkRenderMode");
+        app.canvas.links_render_mode = linkRenderMode;
+    }
+
+    // Update canvas
+    app.canvas.setDirty(/* fg */ false, /* bg */ true);
+}
+
 function getSelectedNodes() {
     const selectedNodes = app.canvas.selected_nodes;
     const result = [];
@@ -138,6 +153,8 @@ app.registerExtension({
         const isLockModeEnabled = (getStorageValue("LockMode.Enabled") === "true");
         updateNodesWidgetsDisabledState(isLockModeEnabled);
         updateSelectionOverlayDisabledState(isLockModeEnabled);
+        updateNodesLinksDisabledState(isLockModeEnabled);
+
 
         // Reset view after graph load
         app.resetView();
@@ -310,17 +327,6 @@ app.registerExtension({
             return null;
         }
 
-        async function appLoadGraphDataWDefault(graphData, clean = true, restore_view = true, workflow = null, { showMissingNodesDialog = true, showMissingModelsDialog = true } = {}) {
-            // Load default graph from templates instead of hardcoded
-            if (!graphData || graphData == window.comfyAPI.defaultGraph.defaultGraph) {
-                graphData = await fetch(
-                    this.api.fileURL("/templates/default.json")
-                ).then((r2) => r2.json());
-            }
-
-            return appLoadGraphData.call(this, graphData, clean, restore_view, workflow, { showMissingNodesDialog, showMissingModelsDialog });
-        }
-
         function setLockMode(mode) {
             const isLockModeEnabled = (getStorageValue("LockMode.Enabled") === "true");
             if (mode != isLockModeEnabled) {
@@ -330,6 +336,7 @@ app.registerExtension({
                     updateMode();
                     updateWidgets();
                     updateSelectionOverlay();
+                    updateNodeLinks();
                 } catch(exception) {
                     console.log('Unexpected error when switching modes.');
                 }
@@ -389,6 +396,13 @@ app.registerExtension({
             updateSelectionOverlayDisabledState(isLockModeEnabled);
         }
 
+        function updateNodeLinks() {
+            const isLockModeEnabled = (getStorageValue("LockMode.Enabled") === "true");
+
+            // Set node links visibility state
+            updateNodesLinksDisabledState(isLockModeEnabled);
+        }
+
         try {
             // new style Manager buttons
             // unload models button into new style Manager button
@@ -419,8 +433,6 @@ app.registerExtension({
 
             updateButtons();
             updateMode();
-
-            app.loadGraphData = appLoadGraphDataWDefault;
 
         } catch(exception) {
             console.log('ComfyUI is outdated. New style menu based features are disabled.');
