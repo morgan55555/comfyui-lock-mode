@@ -264,7 +264,7 @@ app.registerExtension({
                 }
 
                 // Stop interaction with node links (slots)
-                if (node.getSlotInPosition(x2, y2)) {
+                if (node.getSlotOnPos([x2, y2])) {
                     return true;
                 }
 
