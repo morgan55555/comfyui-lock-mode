@@ -215,6 +215,10 @@ app.registerExtension({
             const x2 = e2.canvasX;
             const y2 = e2.canvasY;
 
+            // Allow dragging canvas
+            pointer.finally = () => this.dragging_canvas = false
+            this.dragging_canvas = true
+
             // Stop double clicks
             pointer.eLastDown = void 0;
 
