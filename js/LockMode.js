@@ -2,6 +2,7 @@ import { app } from "../../scripts/app.js";
 import { getStorageValue, setStorageValue } from "../../scripts/utils.js";
 
 const hiddenLinkMode = -1;
+const slotOffset = 5;
 
 const nodeOptionsWhitelist = [
     "Open Image",
@@ -13,6 +14,10 @@ const nodeOptionsWhitelist = [
 const classDisplayDisabledBlacklist = [
     "Note",
     "MarkdownNote"
+];
+
+const classLockedDisableBlacklist = [
+    "PrimitiveNode"
 ];
 
 const classLockedEnableBlacklist = [
@@ -35,12 +40,17 @@ const pageCss = `
 .display_disabled {
     opacity: 0.5 !important;
 }
+
+.display_enabled {
+    opacity: 1 !important;
+}
 `;
 
 function updateNodesWidgetsDisabledState(disabled) {
     const nodes = app.graph.nodes;
     nodes.forEach((node) => {
-        const allow_interaction = node.flags.allow_interaction ?? false;
+        const force_allow_interaction = (classLockedDisableBlacklist.indexOf(node.type) > -1);
+        const allow_interaction = force_allow_interaction || (node.flags.allow_interaction ?? false);
         const widget_disabled = disabled && !allow_interaction;
         const display_as_disabled = widget_disabled && !(classDisplayDisabledBlacklist.indexOf(node.type) > -1);
         const widgets = node.widgets ?? [];
@@ -58,7 +68,9 @@ function updateNodesWidgetsDisabledState(disabled) {
 
                 if (display_as_disabled) {
                     widget.element.classList.add('display_disabled');
+                    widget.classList.remove('display_enabled');
                 } else {
+                    widget.classList.add('display_enabled');
                     widget.element.classList.remove('display_disabled');
                 }
             }
@@ -105,7 +117,6 @@ function setSelectedNodesInteractionState(value) {
     })
 }
 
-
 app.registerExtension({
     name: "Comfy.LockMode",
 
@@ -151,7 +162,6 @@ app.registerExtension({
         updateNodesWidgetsDisabledState(isLockModeEnabled);
         updateSelectionOverlayDisabledState(isLockModeEnabled);
         updateNodesLinksDisabledState(isLockModeEnabled);
-
 
         // Reset view after graph load
         app.resetView();
@@ -246,14 +256,17 @@ app.registerExtension({
                     return true;
                 }
 
-                // Stop interaction with disabled nodes
-                if (!node.flags.allow_interaction) {
-                    return true;
-                }
+                // Do not block interaction with this nodes
+                if (!(classLockedDisableBlacklist.indexOf(node.type) > -1)) {
+                    // Stop interaction with disabled nodes
+                    if (!node.flags.allow_interaction) {
+                        return true;
+                    }
 
-                // Stop interaction with blacklisted nodes
-                if ((classLockedEnableBlacklist.indexOf(node.type) > -1)) {
-                    return true;
+                    // Stop interaction with blacklisted nodes
+                    if ((classLockedEnableBlacklist.indexOf(node.type) > -1)) {
+                        return true;
+                    }
                 }
 
                 // Stop interaction with node resize corner
@@ -268,8 +281,13 @@ app.registerExtension({
                 }
 
                 // Stop interaction with node links (slots)
-                if (node.getSlotOnPos([x2, y2])) {
-                    return true;
+                const slot = node.getSlotOnPos([x2, y2]);
+                if (slot) {
+                    const minX = node.pos[0] + slot.boundingRect[0];
+                    const maxX = minX + slot.boundingRect[2];
+                    if (x2 >= (minX - slotOffset) && x2 <= (maxX + slotOffset)) {
+                        return true;
+                    }
                 }
 
             } else {
