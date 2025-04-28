@@ -57,21 +57,29 @@ function updateNodesWidgetsDisabledState(disabled) {
         widgets.forEach((widget) => {
             widget.disabled = widget_disabled;
 
-            if (widget.element) {
-                widget.element.disabled = widget_disabled;
-
-                if (widget_disabled) {
-                    widget.element.classList.add('disabled');
-                } else {
-                    widget.element.classList.remove('disabled');
-                }
-
+            if (widget.classList) {
                 if (display_as_disabled) {
-                    widget.element.classList.add('display_disabled');
                     widget.classList.remove('display_enabled');
                 } else {
                     widget.classList.add('display_enabled');
-                    widget.element.classList.remove('display_disabled');
+                }
+            }
+
+            if (widget.element) {
+                widget.element.disabled = widget_disabled;
+
+                if (widget.element.classList) {
+                    if (widget_disabled) {
+                        widget.element.classList.add('disabled');
+                    } else {
+                        widget.element.classList.remove('disabled');
+                    }
+
+                    if (display_as_disabled) {
+                        widget.element.classList.add('display_disabled');
+                    } else {
+                        widget.element.classList.remove('display_disabled');
+                    }
                 }
             }
         });
